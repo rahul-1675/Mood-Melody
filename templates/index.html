@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MoodMelody | Mood-Aware Music</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=1.2">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,700;1,700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="app-shell">
+
+        <aside class="sidebar">
+            <div class="brand">
+                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="MM" class="logo-img">
+                <div class="brand-text">
+                    <h1>MoodMelody</h1>
+                    <p>MOOD • MUSIC</p>
+                </div>
+            </div>
+
+            <nav class="main-nav">
+                <div class="nav-item active" data-page="home">
+                    <i class="fas fa-home"></i>
+                    <span>Home</span>
+                </div>
+                <div class="nav-item" data-page="foryou">
+                    <i class="fas fa-compass"></i>
+                    <span>For You</span>
+                </div>
+                <div class="nav-item" data-page="playlists">
+                    <i class="fas fa-layer-group"></i>
+                    <span>Playlists</span>
+                </div>
+                <div class="nav-item" data-page="favorites">
+                    <i class="fas fa-heart"></i>
+                    <span>Favorites</span>
+                </div>
+                <div class="nav-item" data-page="history">
+                    <i class="fas fa-history"></i>
+                    <span>History</span>
+                </div>
+            </nav>
+
+            <div class="sidebar-tip">
+                <p>Tip: Tell MoodMelody <em>how you feel</em> — get a perfectly tuned set.</p>
+            </div>
+        </aside>
+
+
+        <main class="content">
+
+            <div id="page-home" class="page active">
+                <div class="hero">
+                    <p class="eyebrow">• MOOD-AWARE CURATION</p>
+                    <h1 class="hero-title">What does your <span class="accent-font">heart</span> sound like<span class="dot">?</span></h1>
+                    <p class="hero-subtitle">
+                        Tell MoodMelody how you feel — in your own words. We'll read between the lines and craft a set that meets you where you are.
+                    </p>
+                </div>
+
+                <div class="input-section">
+                    <div class="text-input-wrapper">
+                        <textarea id="mood-input" placeholder="I'm feeling..."></textarea>
+                        <div class="input-actions">
+                            <button class="voice-btn"><i class="fas fa-microphone"></i> Speak or hum</button>
+                            <button id="search-btn" class="submit-btn">Find my sound</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="spectrum-section">
+                    <p class="section-eyebrow">THE SPECTRUM</p>
+                    <h2 class="section-title">Seven shades of feeling</h2>
+                    <div class="mood-cards">
+                        <div class="mood-card happy" onclick="fetchRecommendations('', 'happiness')">
+                            <i class="fas fa-sun"></i>
+                            <h3>Happy</h3>
+                            <p>Bright, uplifting, full of light</p>
+                        </div>
+                        <div class="mood-card sad" onclick="fetchRecommendations('', 'sadness')">
+                            <i class="fas fa-umbrella"></i>
+                            <h3>Sad</h3>
+                            <p>Melancholic, reflective, tender</p>
+                        </div>
+                        <div class="mood-card calm" onclick="fetchRecommendations('', 'relaxed')">
+                            <i class="fas fa-leaf"></i>
+                            <h3>Calm</h3>
+                            <p>Soft, grounded, slow breath</p>
+                        </div>
+                        <div class="mood-card energetic" onclick="fetchRecommendations('', 'motivated')">
+                            <i class="fas fa-bolt"></i>
+                            <h3>Energetic</h3>
+                            <p>Driving, alive, full throttle</p>
+                        </div>
+                        <div class="mood-card neutral" onclick="fetchRecommendations('', 'relaxed')">
+                            <i class="fas fa-circle-half-stroke"></i>
+                            <h3>Neutral</h3>
+                            <p>Balanced, steady, in-between</p>
+                        </div>
+                        <div class="mood-card focused" onclick="fetchRecommendations('', 'motivated')">
+                            <i class="fas fa-bullseye"></i>
+                            <h3>Focused</h3>
+                            <p>Locked in, deep, intentional</p>
+                        </div>
+                        <div class="mood-card romantic" onclick="fetchRecommendations('', 'love')">
+                            <i class="fas fa-sparkles"></i>
+                            <h3>Romantic</h3>
+                            <p>Warm, intimate, slow-glow</p>
+                        </div>
+                    </div>
+                </div>
+
+                <footer class="home-footer">
+                    <p><i class="fas fa-info-circle"></i> Note: All tracks are 30-second high-quality previews. MoodMelody provides curated snippets to help you find your next favorite sound.</p>
+                </footer>
+            </div>
+
+
+            <div id="page-foryou" class="page">
+                <div class="results-container">
+                    <div class="results-header">
+                        <div class="foryou-title">
+                            <p class="eyebrow">• PERSONALIZED FOR YOU</p>
+                            <h2>Your <span id="detected-mood-name" style="color: var(--accent)">...</span> Soundscape</h2>
+                        </div>
+                        <div class="lang-pill-selector">
+                            <span class="active" data-lang="all">All</span>
+                            <span data-lang="English">English</span>
+                            <span data-lang="Hindi">Hindi</span>
+                            <span data-lang="Telugu">Telugu</span>
+                        </div>
+                    </div>
+                    <div class="song-list" id="song-grid">
+
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="page-favorites" class="page">
+                <div class="results-container">
+                    <div class="results-header">
+                        <div class="foryou-title">
+                            <p class="eyebrow">• YOUR LIBRARY</p>
+                            <h2>Liked <span style="color: var(--accent)">Songs</span></h2>
+                        </div>
+                    </div>
+                    <div class="song-list" id="favorites-grid">
+
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="page-playlists" class="page">
+                <div class="results-container">
+                    <div id="playlist-grid-view">
+                        <div class="results-header">
+                            <div class="foryou-title">
+                                <p class="eyebrow">• YOUR COLLECTIONS</p>
+                                <h2>Playlists</h2>
+                            </div>
+                            <button class="submit-btn" onclick="createPlaylist()">+ New Playlist</button>
+                        </div>
+                        <div class="playlists-container" id="playlists-list"></div>
+                    </div>
+
+                    <div id="playlist-detail-view" style="display: none;">
+                        <div class="results-header">
+                            <div class="foryou-title">
+                                <button class="action-btn" onclick="showPlaylistGrid()" style="margin-bottom: 10px;">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </button>
+                                <h2 id="current-playlist-name">---</h2>
+                            </div>
+                            <button class="action-btn" onclick="deleteCurrentPlaylist()" style="color: #ff476f;">
+                                <i class="fas fa-trash"></i> Delete Playlist
+                            </button>
+                        </div>
+                        <div class="song-list" id="playlist-songs-grid"></div>
+                    </div>
+                </div>
+            </div>
+
+
+            <div id="page-history" class="page">
+                <div class="results-container">
+                    <div class="results-header">
+                        <div class="foryou-title">
+                            <p class="eyebrow">• VIBE JOURNEY</p>
+                            <h2>Recent <span style="color: var(--accent)">Moods</span></h2>
+                        </div>
+                    </div>
+                    <div class="history-list" id="history-list"></div>
+                </div>
+            </div>
+        </main>
+
+
+        <div id="player-popup" class="player-popup">
+            <div class="player-header">
+                <div class="mini-info">
+                    <img id="player-art" src="" alt="">
+                    <div class="mini-text">
+                        <span class="status-label">Now Playing</span>
+                        <h4 id="player-title">---</h4>
+                    </div>
+                </div>
+                <div class="player-actions">
+                    <i class="fas fa-volume-up"></i>
+                    <i class="fas fa-times" id="close-player"></i>
+                </div>
+            </div>
+            <div class="player-body">
+                <div class="progress-bar">
+                    <div class="progress" id="progress"></div>
+                </div>
+                <div class="main-controls">
+                    <i class="fas fa-step-backward"></i>
+                    <div class="play-circle" id="play-pause-btn">
+                        <i class="fas fa-play"></i>
+                    </div>
+                    <i class="fas fa-step-forward"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <audio id="audio-player"></audio>
+    <script src="{{ url_for('static', filename='js/app.js') }}?v=1.2"></script>
+</body>
+</html>
