@@ -1,0 +1,13 @@
+.env
+__pycache__/
+*.py[cod]
+*$py.class
+instance/
+static/music_cache/
+.DS_Store
+*.db
+build/
+dist/
+.venv/
+venv/
+ENV/
