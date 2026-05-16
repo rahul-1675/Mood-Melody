@@ -8,6 +8,16 @@ import logging
 
 load_dotenv()
 
+# Download NLTK data for TextBlob
+import nltk
+try:
+    nltk.data.find('corpora/movie_reviews')
+    nltk.data.find('corpora/wordnet')
+except LookupError:
+    nltk.download('movie_reviews')
+    nltk.download('wordnet')
+    nltk.download('punkt')
+
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
