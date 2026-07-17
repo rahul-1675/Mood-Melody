@@ -8,7 +8,6 @@ import logging
 
 load_dotenv()
 
-# Download NLTK data for TextBlob
 import nltk
 try:
     nltk.data.find('corpora/movie_reviews')
@@ -45,7 +44,7 @@ def recommend():
         logger.error(f"History DB Error: {e}")
         db.session.rollback()
 
-    songs = get_recommendations(mood)
+    songs = get_recommendations(mood, text=text)
     return jsonify({"mood": mood, "songs": songs})
 
 @app.route('/api/history', methods=['GET'])

@@ -25,6 +25,20 @@ document.addEventListener('DOMContentLoaded', () => {
     let playlistsData = [];
     let activePlaylistId = null;
     let currentPage = 'home';
+    let likedSongTitles = new Set();
+
+    async function updateLikedSongsSet() {
+        try {
+            const res = await fetch('/api/favorites');
+            if (res.ok) {
+                const songs = await res.json();
+                likedSongTitles = new Set(songs.map(s => s.title.toLowerCase().trim()));
+            }
+        } catch(e) {
+            console.error("Failed to load favorites cache", e);
+        }
+    }
+    updateLikedSongsSet();
 
 
     function navigateTo(pageId) {
@@ -52,26 +66,67 @@ document.addEventListener('DOMContentLoaded', () => {
         const filtered = currentLang === 'all' 
             ? songs 
             : songs.filter(s => s.language === currentLang);
-        
-        container.innerHTML = filtered.map(song => `
-            <div class="song-card">
-                <div onclick="playSong('${song.preview_url}', '${song.title}', '${song.album_art}')">
-                    <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}">
-                    <h3>${song.title}</h3>
-                    <p>${song.artist} • ${song.language || 'English'}</p>
+            
+        if (!filtered || filtered.length === 0) {
+            container.innerHTML = `<p style="color: var(--text-dim); padding: 25px; font-size: 0.95rem; text-align: center;">No tracks found.</p>`;
+            return;
+        }
+
+        const formatDuration = (ms) => {
+            if (!ms) return "3:00";
+            const min = Math.floor(ms / 60000);
+            const sec = Math.floor((ms % 60000) / 1000);
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        };
+
+        container.innerHTML = `
+            <div class="spotify-table" style="width: 100%;">
+                <div class="spotify-table-header">
+                    <span class="spotify-row-index">#</span>
+                    <span>Title</span>
+                    <span>Album</span>
+                    <span><i class="far fa-clock"></i></span>
+                    <span style="text-align: right; padding-right: 15px;">Actions</span>
                 </div>
-                <div class="song-actions">
-                    ${type === 'favorites' ? 
-                        `<button class="action-btn" onclick="deleteFavorite(${song.id})"><i class="fas fa-trash"></i></button>` : 
-                        `<button class="action-btn" onclick="toggleFavorite(this, ${JSON.stringify(song).replace(/"/g, '&quot;')})"><i class="fas fa-heart"></i></button>`
-                    }
-                    ${type === 'playlist-detail' ? 
-                        `<button class="action-btn" onclick="removeSongFromPlaylist(${song.id})"><i class="fas fa-minus-circle"></i></button>` : 
-                        `<button class="action-btn" onclick="showPlaylistPicker(${JSON.stringify(song).replace(/"/g, '&quot;')})"><i class="fas fa-plus"></i></button>`
-                    }
-                </div>
+                ${filtered.map((song, idx) => {
+                    const safeTitle = song.title.replace(/'/g, "\\'");
+                    const safeArt = song.album_art ? song.album_art.replace(/'/g, "\\'") : '';
+                    const safeUrl = song.preview_url ? song.preview_url.replace(/'/g, "\\'") : '';
+                    const songJson = JSON.stringify(song).replace(/"/g, '&quot;');
+                    
+                    const isLiked = likedSongTitles.has(song.title.toLowerCase().trim());
+                    const heartIcon = isLiked ? 'fas fa-heart' : 'far fa-heart';
+                    const heartColor = isLiked ? 'var(--accent)' : 'var(--text-dim)';
+                    const heartClass = isLiked ? 'active' : '';
+                    const heartText = isLiked ? 'Liked' : 'Like';
+                    
+                    return `
+                        <div class="spotify-table-row">
+                            <span class="spotify-row-index">${idx + 1}</span>
+                            <div class="spotify-row-title-container" onclick="playSong('${safeUrl}', '${safeTitle}', '${safeArt}')">
+                                <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}">
+                                <div class="spotify-row-text">
+                                    <span class="spotify-row-name">${song.title}</span>
+                                    <span class="spotify-row-artist">${song.artist}</span>
+                                </div>
+                            </div>
+                            <span class="spotify-row-album">${song.album || '---'}</span>
+                            <span class="spotify-row-duration">${formatDuration(song.duration_ms)}</span>
+                            <div class="spotify-row-actions">
+                                ${type === 'favorites' ? 
+                                    `<button class="action-btn" style="color: #ff476f; background: transparent; border: none; padding: 0 10px;" onclick="deleteFavorite(${song.id})"><i class="fas fa-trash"></i> Remove</button>` : 
+                                    `<button class="action-btn ${heartClass}" style="color: ${heartColor}; background: transparent; border: none; padding: 0 10px;" onclick="toggleFavorite(this, ${songJson})"><i class="${heartIcon}"></i> ${heartText}</button>`
+                                }
+                                ${type === 'playlist-detail' ? 
+                                    `<button class="action-btn" style="color: #ff476f; background: transparent; border: none; padding: 0 10px;" onclick="removeSongFromPlaylist(${song.id})"><i class="fas fa-minus-circle"></i> Remove</button>` : 
+                                    `<button class="action-btn" style="color: var(--text-dim); background: transparent; border: none; padding: 0 10px;" onclick="showPlaylistPicker(${songJson})"><i class="fas fa-plus"></i> Add to Playlist</button>`
+                                }
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
             </div>
-        `).join('');
+        `;
     }
 
 
@@ -107,13 +162,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     window.toggleFavorite = async (btn, song) => {
-        await fetch('/api/favorites', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(song)
-        });
-        btn.classList.add('active');
-        alert("Liked!");
+        const titleClean = song.title.toLowerCase().trim();
+        const isLiked = likedSongTitles.has(titleClean);
+        if (isLiked) {
+            const res = await fetch('/api/favorites');
+            const favs = await res.json();
+            const matchingFav = favs.find(f => f.title.toLowerCase().trim() === titleClean);
+            if (matchingFav) {
+                await fetch(`/api/favorites/${matchingFav.id}`, { method: 'DELETE' });
+                likedSongTitles.delete(titleClean);
+                btn.style.color = 'var(--text-dim)';
+                btn.classList.remove('active');
+                btn.innerHTML = '<i class="far fa-heart"></i> Like';
+            }
+        } else {
+            await fetch('/api/favorites', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(song)
+            });
+            likedSongTitles.add(titleClean);
+            btn.style.color = 'var(--accent)';
+            btn.classList.add('active');
+            btn.innerHTML = '<i class="fas fa-heart"></i> Liked';
+        }
     };
 
     window.deleteFavorite = async (fid) => {
@@ -148,6 +220,57 @@ document.addEventListener('DOMContentLoaded', () => {
         if (res.ok) showPlaylistGrid();
     };
 
+    window.renderPlaylistSongs = (songs, container, type = 'playlist-detail') => {
+        if (!songs || songs.length === 0) {
+            container.innerHTML = `<p style="color: var(--text-dim); padding: 25px; font-size: 0.95rem; text-align: center;">No tracks in this playlist yet. Add recommendations below!</p>`;
+            return;
+        }
+
+        const formatDuration = (ms) => {
+            if (!ms) return "3:00";
+            const min = Math.floor(ms / 60000);
+            const sec = Math.floor((ms % 60000) / 1000);
+            return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+        };
+
+        container.innerHTML = `
+            <div class="spotify-table">
+                <div class="spotify-table-header">
+                    <span class="spotify-row-index">#</span>
+                    <span>Title</span>
+                    <span>Album</span>
+                    <span><i class="far fa-clock"></i></span>
+                    <span style="text-align: right; padding-right: 15px;">Actions</span>
+                </div>
+                ${songs.map((song, idx) => {
+                    const safeTitle = song.title.replace(/'/g, "\\'");
+                    const safeArt = song.album_art ? song.album_art.replace(/'/g, "\\'") : '';
+                    const safeUrl = song.preview_url ? song.preview_url.replace(/'/g, "\\'") : '';
+                    
+                    return `
+                        <div class="spotify-table-row">
+                            <span class="spotify-row-index">${idx + 1}</span>
+                            <div class="spotify-row-title-container" onclick="playSong('${safeUrl}', '${safeTitle}', '${safeArt}')">
+                                <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}">
+                                <div class="spotify-row-text">
+                                    <span class="spotify-row-name">${song.title}</span>
+                                    <span class="spotify-row-artist">${song.artist}</span>
+                                </div>
+                            </div>
+                            <span class="spotify-row-album">${song.album || '---'}</span>
+                            <span class="spotify-row-duration">${formatDuration(song.duration_ms)}</span>
+                            <div class="spotify-row-actions">
+                                <button class="action-btn" style="color: #ff476f; background: transparent; border: none; padding: 0 10px;" onclick="removeSongFromPlaylist(${song.id})">
+                                    <i class="fas fa-minus-circle"></i> Remove
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
+    };
+
     window.openPlaylist = (pid) => {
         const p = playlistsData.find(pl => pl.id === pid);
         if (p) {
@@ -155,7 +278,8 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('playlist-grid-view').style.display = 'none';
             document.getElementById('playlist-detail-view').style.display = 'block';
             document.getElementById('current-playlist-name').textContent = p.name;
-            renderSongs(p.songs, playlistSongsGrid, 'playlist-detail');
+            renderPlaylistSongs(p.songs, playlistSongsGrid, 'playlist-detail');
+            loadPlaylistRecommendations(p);
         }
     };
 
@@ -233,6 +357,123 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     searchBtn.onclick = () => fetchRecommendations(moodInput.value);
+
+    window.loadPlaylistRecommendations = async (playlist) => {
+        const recsContainer = document.getElementById('playlist-recs-grid');
+        if (!recsContainer) return;
+        recsContainer.innerHTML = `<div style="color: var(--text-dim); font-size: 0.9rem; padding: 20px 0;"><i class="fas fa-spinner fa-spin"></i> Finding matching vibes...</div>`;
+        
+        let mood = "Happy";
+        if (playlist.songs && playlist.songs.length > 0) {
+            const moods = playlist.songs.map(s => s.mood).filter(Boolean);
+            if (moods.length > 0) {
+                mood = moods.sort((a,b) =>
+                      moods.filter(v => v===a).length
+                    - moods.filter(v => v===b).length
+                ).pop();
+            }
+        } else {
+            const name = playlist.name.toLowerCase();
+            if (name.includes("sad") || name.includes("cry") || name.includes("lonely")) mood = "Sad";
+            else if (name.includes("love") || name.includes("romance") || name.includes("sweet")) mood = "Love";
+            else if (name.includes("gym") || name.includes("workout") || name.includes("run") || name.includes("power")) mood = "Energetic";
+            else if (name.includes("party") || name.includes("club") || name.includes("dance")) mood = "Party";
+            else if (name.includes("calm") || name.includes("relax") || name.includes("chill") || name.includes("peace")) mood = "Calm";
+        }
+        
+        try {
+            const response = await fetch('/api/recommend', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mood, text: "" })
+            });
+            const data = await response.json();
+            
+            const existingTitles = new Set(playlist.songs.map(s => s.title.toLowerCase()));
+            let filteredRecs = data.songs.filter(s => !existingTitles.has(s.title.toLowerCase()));
+            
+            // Re-shuffle to provide variety on Refresh
+            filteredRecs.sort(() => Math.random() - 0.5);
+            filteredRecs = filteredRecs.slice(0, 5);
+            
+            if (filteredRecs.length === 0) {
+                recsContainer.innerHTML = `<p style="color: var(--text-dim); font-size: 0.9rem;">No new recommendations found.</p>`;
+                return;
+            }
+
+            const formatDuration = (ms) => {
+                if (!ms) return "3:00";
+                const min = Math.floor(ms / 60000);
+                const sec = Math.floor((ms % 60000) / 1000);
+                return `${min}:${sec < 10 ? '0' : ''}${sec}`;
+            };
+            
+            recsContainer.innerHTML = `
+                <div class="spotify-table" style="width: 100%;">
+                    <div class="spotify-table-header">
+                        <span class="spotify-row-index">#</span>
+                        <span>Title</span>
+                        <span>Album</span>
+                        <span><i class="far fa-clock"></i></span>
+                        <span style="text-align: right; padding-right: 15px;">Actions</span>
+                    </div>
+                    ${filteredRecs.map((song, idx) => {
+                        const safeTitle = song.title.replace(/'/g, "\\'");
+                        const safeArt = song.album_art ? song.album_art.replace(/'/g, "\\'") : '';
+                        const safeUrl = song.preview_url ? song.preview_url.replace(/'/g, "\\'") : '';
+                        const songJson = JSON.stringify(song).replace(/"/g, '&quot;');
+                        
+                        return `
+                            <div class="spotify-table-row">
+                                <span class="spotify-row-index">${idx + 1}</span>
+                                <div class="spotify-row-title-container" onclick="playSong('${safeUrl}', '${safeTitle}', '${safeArt}')">
+                                    <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}">
+                                    <div class="spotify-row-text">
+                                        <span class="spotify-row-name">${song.title}</span>
+                                        <span class="spotify-row-artist">${song.artist}</span>
+                                    </div>
+                                </div>
+                                <span class="spotify-row-album">${song.album || '---'}</span>
+                                <span class="spotify-row-duration">${formatDuration(song.duration_ms)}</span>
+                                <div class="spotify-row-actions">
+                                    <button class="submit-btn" style="padding: 6px 12px; font-size: 0.8rem; background: var(--accent); border: none; border-radius: 500px; font-weight: bold; cursor: pointer;" onclick="addRecommendedSongToPlaylist(${playlist.id}, ${songJson})">
+                                        <i class="fas fa-plus"></i> Add
+                                    </button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+            
+        } catch (error) {
+            console.error(error);
+            recsContainer.innerHTML = `<p style="color: #ff476f; font-size: 0.9rem;">Failed to load recommendations.</p>`;
+        }
+    };
+
+    window.addRecommendedSongToPlaylist = async (pid, song) => {
+        await fetch(`/api/playlists/${pid}/songs`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(song)
+        });
+        
+        const res = await fetch('/api/playlists');
+        playlistsData = await res.json();
+        const updatedPlaylist = playlistsData.find(pl => pl.id === pid);
+        if (updatedPlaylist) {
+            renderPlaylistSongs(updatedPlaylist.songs, playlistSongsGrid, 'playlist-detail');
+            loadPlaylistRecommendations(updatedPlaylist);
+        }
+    };
+
+    window.refreshPlaylistRecommendations = () => {
+        const p = playlistsData.find(pl => pl.id === activePlaylistId);
+        if (p) {
+            loadPlaylistRecommendations(p);
+        }
+    };
 
 
     const voiceBtn = document.querySelector('.voice-btn');

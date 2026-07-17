@@ -1,77 +1,154 @@
 import pandas as pd
 import numpy as np
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics.pairwise import cosine_similarity
 import os
 import random
+import re
 
 class LocalMusicRecommender:
     def __init__(self, csv_path):
         if not os.path.exists(csv_path):
             self.df = pd.DataFrame()
             return
-        self.df = pd.read_csv(csv_path)
-        if not self.df.empty:
+        self.df = pd.read_csv(csv_path).fillna("")
+        if 'id' not in self.df.columns:
+            self.df['id'] = self.df.index
 
-            self.scaler = StandardScaler()
-            self.features_cols = ['energy', 'valence', 'tempo']
-            self.features = self.df[self.features_cols].values
-            self.features_scaled = self.scaler.fit_transform(self.features)
-
-    def recommend(self, mood, top_n=20):
+    def recommend(self, mood, text="", top_n=20):
         if self.df.empty:
             return []
 
+        # Spotify-like search mode: Check if text contains a specific song title or artist match
+        query = text.strip().lower() if text else ""
+        is_song_search = False
+        best_matches = pd.DataFrame()
 
-        targets = {
-            "happiness": [0.85, 0.90, 125],
-            "sadness": [0.15, 0.15, 75],
-            "anger": [0.95, 0.10, 140],
-            "fear": [0.35, 0.05, 115],
-            "surprise": [0.85, 0.55, 135],
-            "disgust": [0.45, 0.15, 85],
-            "love": [0.35, 0.85, 90],
-            "relaxed": [0.25, 0.55, 75],
-            "motivated": [0.95, 0.75, 145]
+        if query:
+            # Match exact title, exact artist, or substring matches
+            exact_title = self.df[self.df['title'].str.lower() == query]
+            exact_artist = self.df[self.df['artist'].str.lower() == query]
+            
+            if not exact_artist.empty:
+                best_matches = exact_artist
+                is_song_search = True
+            elif not exact_title.empty:
+                best_matches = exact_title
+                is_song_search = True
+            else:
+                # Substring matching in title or artist
+                sub_matches = self.df[
+                    self.df['title'].str.lower().str.contains(query, na=False, regex=False) | 
+                    self.df['artist'].str.lower().str.contains(query, na=False, regex=False)
+                ]
+                if not sub_matches.empty:
+                    # Sort matches by popularity so best known tracks appear first
+                    best_matches = sub_matches.sort_values(by='popularity', ascending=False)
+                    is_song_search = True
+
+        if is_song_search and not best_matches.empty:
+            # We found matching songs/artists! Output Spotify-like search recommendations.
+            # 1. Take up to 5 best matched tracks to show at the top
+            top_results = best_matches.head(5).to_dict('records')
+            
+            # 2. Get the primary seed song for context
+            seed_song = top_results[0]
+            seed_mood = seed_song['mood']
+            seed_lang = seed_song['language']
+            seed_keywords = [k.strip() for k in seed_song['keywords'].split(',') if k.strip()]
+            
+            # Find similar recommendations in the database (excluding matched titles to avoid duplicates)
+            matched_titles = {t['title'].lower() for t in top_results}
+            candidates = self.df[~self.df['title'].str.lower().isin(matched_titles)].copy()
+            
+            # Calculate similarity score based on keyword overlap
+            candidates['similarity_score'] = 0.0
+            if seed_keywords:
+                for kw in seed_keywords:
+                    candidates['similarity_score'] += candidates['keywords'].str.contains(rf'\b{kw}\b', case=False, na=False, regex=True).astype(float)
+            
+            # Boost scores for context matching (same artist, same language, same mood)
+            candidates.loc[candidates['artist'].str.lower() == seed_song['artist'].lower(), 'similarity_score'] += 3.0
+            candidates.loc[candidates['language'].str.lower() == seed_lang.lower(), 'similarity_score'] += 2.0
+            candidates.loc[candidates['mood'].str.lower() == seed_mood.lower(), 'similarity_score'] += 4.0
+            
+            # Sort recommendations by similarity score and popularity
+            recommendations = candidates.sort_values(by=['similarity_score', 'popularity'], ascending=[False, False])
+            rec_list = recommendations.head(top_n).to_dict('records')
+            
+            # Combine: exact search results first, then similar recommendations
+            final_list = list(top_results) + rec_list
+            return final_list
+
+        # Fallback to standard mood-based recommendation (e.g. for general prompts like "feeling sad")
+        mood_map = {
+            "happiness": "Happy",
+            "happy": "Happy",
+            "sadness": "Sad",
+            "sad": "Sad",
+            "love": "Love",
+            "romantic": "Romantic",
+            "anger": "Angry",
+            "angry": "Angry",
+            "fear": "Fear",
+            "surprise": "Surprise",
+            "motivated": "Motivational",
+            "motivational": "Motivational",
+            "relaxed": "Relaxed",
+            "calm": "Calm",
+            "party": "Party",
+            "energetic": "Energetic",
+            "devotional": "Devotional",
+            "emotional": "Emotional",
+            "nostalgic": "Nostalgic",
+            "hopeful": "Hopeful",
+            "heartbreak": "Heartbreak"
         }
-        
-        target_vec = targets.get(mood.lower(), [0.5, 0.5, 100])
-        target_scaled = self.scaler.transform([target_vec])
-        
+        mapped_mood = mood_map.get(mood.lower(), mood)
 
-        similarities = cosine_similarity(target_scaled, self.features_scaled).flatten()
-        self.df['similarity'] = similarities
-        
-        languages = ['English', 'Hindi', 'Telugu']
+        # Clean and extract query words
+        query_words = []
+        if text:
+            text_clean = re.sub(r"[^\w\s]", " ", text.lower())
+            query_words = [w for w in text_clean.split() if len(w) > 2]
+
+        self.df['similarity'] = 0.0
+        if query_words:
+            for word in query_words:
+                self.df['similarity'] += self.df['keywords'].str.contains(rf'\b{word}\b', case=False, na=False, regex=True).astype(float)
+
+        languages = ['English', 'Hindi', 'Telugu', 'Tamil', 'Malayalam', 'Kannada']
         final_recommendations = []
         
         for lang in languages:
             lang_matches = self.df[self.df['language'] == lang]
-            if lang_matches.empty: continue
+            if lang_matches.empty: 
+                continue
             
-
+            mood_exact = lang_matches[lang_matches['mood'].str.lower() == mapped_mood.lower()]
             
-            mood_exact = lang_matches[lang_matches['mood'] == mood.lower()]
+            if not mood_exact.empty and query_words:
+                mood_exact = mood_exact.sort_values(by='similarity', ascending=False)
             
             if len(mood_exact) >= top_n:
-
-                best_pool = mood_exact.sort_values(by='similarity', ascending=False).head(40)
+                best_pool = mood_exact.head(100)
                 top_matches = best_pool.sample(n=min(len(best_pool), top_n))
             else:
-
                 fill_needed = top_n - len(mood_exact)
-                others = lang_matches[lang_matches['mood'] != mood.lower()]
-                fill_pool = others.sort_values(by='similarity', ascending=False).head(fill_needed * 2)
+                others = lang_matches[lang_matches['mood'].str.lower() != mapped_mood.lower()]
                 
-                combined = pd.concat([mood_exact, fill_pool.sample(n=min(len(fill_pool), fill_needed))])
-                top_matches = combined
+                if not others.empty:
+                    if query_words:
+                        others = others.sort_values(by='similarity', ascending=False)
+                    fill_pool = others.head(fill_needed * 2)
+                    top_matches = pd.concat([mood_exact, fill_pool.sample(n=min(len(fill_pool), fill_needed))])
+                else:
+                    top_matches = mood_exact
             
             final_recommendations.extend(top_matches.to_dict('records'))
         
         random.shuffle(final_recommendations)
         return final_recommendations
 
-def get_recommendations(mood):
+def get_recommendations(mood, text=""):
     csv_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'songs.csv')
     recommender = LocalMusicRecommender(csv_path)
-    return recommender.recommend(mood, top_n=20)
+    return recommender.recommend(mood, text, top_n=60)
