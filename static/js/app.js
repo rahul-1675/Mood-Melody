@@ -27,6 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentPage = 'home';
     let likedSongTitles = new Set();
 
+    let foryouQueue = [];
+    let favoritesQueue = [];
+    let playlistQueue = [];
+    let recsQueue = [];
+    let activePlayQueue = [];
+    let currentQueueIndex = -1;
+
     async function updateLikedSongsSet() {
         try {
             const res = await fetch('/api/favorites');
@@ -72,6 +79,12 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        if (type === 'favorites') {
+            favoritesQueue = filtered;
+        } else {
+            foryouQueue = filtered;
+        }
+
         const formatDuration = (ms) => {
             if (!ms) return "3:00";
             const min = Math.floor(ms / 60000);
@@ -103,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return `
                         <div class="spotify-table-row">
                             <span class="spotify-row-index">${idx + 1}</span>
-                            <div class="spotify-row-title-container" onclick="playSong('${safeUrl}', '${safeTitle}', '${safeArt}')">
+                            <div class="spotify-row-title-container" onclick="playTrackFromQueue(${idx}, '${type}')">
                                 <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}">
                                 <div class="spotify-row-text">
                                     <span class="spotify-row-name">${song.title}</span>
@@ -226,6 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
 
+        playlistQueue = songs;
+
         const formatDuration = (ms) => {
             if (!ms) return "3:00";
             const min = Math.floor(ms / 60000);
@@ -250,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return `
                         <div class="spotify-table-row">
                             <span class="spotify-row-index">${idx + 1}</span>
-                            <div class="spotify-row-title-container" onclick="playSong('${safeUrl}', '${safeTitle}', '${safeArt}')">
+                            <div class="spotify-row-title-container" onclick="playTrackFromQueue(${idx}, 'playlist')">
                                 <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}">
                                 <div class="spotify-row-text">
                                     <span class="spotify-row-name">${song.title}</span>
@@ -328,14 +343,80 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     window.playSong = (url, title, art) => {
-        if (!url) return alert("No preview");
-        playerPopup.style.display = 'block';
-        audioPlayer.src = url;
-        audioPlayer.play();
-        playerTitle.textContent = title;
-        playerArt.src = art || '';
-        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        activePlayQueue = [{ preview_url: url, title: title, album_art: art }];
+        currentQueueIndex = 0;
+        playCurrentQueueTrack();
     };
+
+    window.playTrackFromQueue = (idx, queueType) => {
+        if (queueType === 'favorites') activePlayQueue = favoritesQueue;
+        else if (queueType === 'playlist') activePlayQueue = playlistQueue;
+        else if (queueType === 'recs') activePlayQueue = recsQueue;
+        else activePlayQueue = foryouQueue;
+        
+        currentQueueIndex = idx;
+        playCurrentQueueTrack();
+    };
+
+    window.playCurrentQueueTrack = () => {
+        if (currentQueueIndex < 0 || currentQueueIndex >= activePlayQueue.length) return;
+        const song = activePlayQueue[currentQueueIndex];
+        if (!song) return;
+        
+        playerPopup.style.display = 'block';
+        
+        if (!song.preview_url) {
+            playerTitle.textContent = "Skipping: " + song.title + " (No preview)";
+            playerArt.src = song.album_art || 'https://via.placeholder.com/300';
+            setTimeout(() => {
+                playNextSong();
+            }, 1500);
+            return;
+        }
+        
+        audioPlayer.src = song.preview_url;
+        audioPlayer.play().catch(err => {
+            console.error("Playback error:", err);
+        });
+        playerTitle.textContent = song.title;
+        playerArt.src = song.album_art || 'https://via.placeholder.com/300';
+        playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>';
+        
+        updateRowHighlighting();
+    };
+
+    window.playNextSong = () => {
+        if (activePlayQueue.length === 0) return;
+        currentQueueIndex = (currentQueueIndex + 1) % activePlayQueue.length;
+        playCurrentQueueTrack();
+    };
+
+    window.playPrevSong = () => {
+        if (activePlayQueue.length === 0) return;
+        currentQueueIndex = (currentQueueIndex - 1 + activePlayQueue.length) % activePlayQueue.length;
+        playCurrentQueueTrack();
+    };
+
+    function updateRowHighlighting() {
+        const rows = document.querySelectorAll('.spotify-table-row');
+        rows.forEach(row => {
+            row.classList.remove('playing-highlight');
+        });
+        
+        if (currentQueueIndex >= 0 && currentQueueIndex < activePlayQueue.length) {
+            const currentSong = activePlayQueue[currentQueueIndex];
+            rows.forEach(row => {
+                const nameEl = row.querySelector('.spotify-row-name');
+                const artistEl = row.querySelector('.spotify-row-artist');
+                if (nameEl && artistEl) {
+                    if (nameEl.textContent.trim().toLowerCase() === currentSong.title.trim().toLowerCase() &&
+                        artistEl.textContent.trim().toLowerCase() === currentSong.artist.trim().toLowerCase()) {
+                        row.classList.add('playing-highlight');
+                    }
+                }
+            });
+        }
+    }
 
     closePlayer.onclick = () => { playerPopup.style.display = 'none'; audioPlayer.pause(); };
     playPauseBtn.onclick = () => {
@@ -345,6 +426,14 @@ document.addEventListener('DOMContentLoaded', () => {
     audioPlayer.ontimeupdate = () => {
         progressBar.style.width = `${(audioPlayer.currentTime / audioPlayer.duration) * 100}%`;
     };
+    audioPlayer.onended = () => {
+        playNextSong();
+    };
+    
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    if (prevBtn) prevBtn.onclick = () => playPrevSong();
+    if (nextBtn) nextBtn.onclick = () => playNextSong();
 
 
     languagePills.forEach(pill => {
@@ -401,6 +490,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            recsQueue = filteredRecs;
+
             const formatDuration = (ms) => {
                 if (!ms) return "3:00";
                 const min = Math.floor(ms / 60000);
@@ -426,7 +517,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         return `
                             <div class="spotify-table-row">
                                 <span class="spotify-row-index">${idx + 1}</span>
-                                <div class="spotify-row-title-container" onclick="playSong('${safeUrl}', '${safeTitle}', '${safeArt}')">
+                                <div class="spotify-row-title-container" onclick="playTrackFromQueue(${idx}, 'recs')">
                                     <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}">
                                     <div class="spotify-row-text">
                                         <span class="spotify-row-name">${song.title}</span>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MoodMelody | Mood-Aware Music</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2.3">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2.4">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,700;1,700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -230,17 +230,17 @@
                     <div class="progress" id="progress"></div>
                 </div>
                 <div class="main-controls">
-                    <i class="fas fa-step-backward"></i>
+                    <i class="fas fa-step-backward" id="prev-btn" style="cursor: pointer;"></i>
                     <div class="play-circle" id="play-pause-btn">
                         <i class="fas fa-play"></i>
                     </div>
-                    <i class="fas fa-step-forward"></i>
+                    <i class="fas fa-step-forward" id="next-btn" style="cursor: pointer;"></i>
                 </div>
             </div>
         </div>
     </div>
 
     <audio id="audio-player"></audio>
-    <script src="{{ url_for('static', filename='js/app.js') }}?v=2.3"></script>
+    <script src="{{ url_for('static', filename='js/app.js') }}?v=2.4"></script>
 </body>
 </html>

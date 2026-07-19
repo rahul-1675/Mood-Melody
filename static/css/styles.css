@@ -862,4 +862,10 @@ textarea {
     gap: 10px;
     justify-content: flex-end;
 }
-
+.spotify-table-row.playing-highlight {
+    background-color: rgba(29, 185, 84, 0.15) !important;
+    border-left: 4px solid var(--accent);
+}
+.spotify-table-row.playing-highlight .spotify-row-name {
+    color: var(--accent) !important;
+}
