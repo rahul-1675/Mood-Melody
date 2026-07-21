@@ -4,14 +4,37 @@ import os
 import random
 import re
 
+_cached_df = None
+
+def _get_or_load_df(csv_path):
+    global _cached_df
+    if _cached_df is not None:
+        return _cached_df
+        
+    if not os.path.exists(csv_path):
+        _cached_df = pd.DataFrame()
+        return _cached_df
+        
+    # Optimize: load only required columns from the 1.13 GB file
+    cols = ['id', 'title', 'artist', 'album', 'duration_ms', 'language', 'mood', 'popularity', 'keywords', 'album_art', 'preview_url']
+    df = pd.read_csv(csv_path, usecols=cols)
+    
+    # Fill missing values explicitly
+    for col in df.columns:
+        if df[col].dtype == object:
+            df[col] = df[col].fillna("")
+        else:
+            df[col] = df[col].fillna(0)
+            
+    if 'id' not in df.columns:
+        df['id'] = df.index
+        
+    _cached_df = df
+    return _cached_df
+
 class LocalMusicRecommender:
     def __init__(self, csv_path):
-        if not os.path.exists(csv_path):
-            self.df = pd.DataFrame()
-            return
-        self.df = pd.read_csv(csv_path).fillna("")
-        if 'id' not in self.df.columns:
-            self.df['id'] = self.df.index
+        self.df = _get_or_load_df(csv_path)
 
     def recommend(self, mood, text="", top_n=20):
         if self.df.empty:
@@ -63,7 +86,7 @@ class LocalMusicRecommender:
             candidates['similarity_score'] = 0.0
             if seed_keywords:
                 for kw in seed_keywords:
-                    candidates['similarity_score'] += candidates['keywords'].str.contains(rf'\b{kw}\b', case=False, na=False, regex=True).astype(float)
+                    candidates['similarity_score'] += candidates['keywords'].str.contains(kw, case=False, na=False, regex=False).astype(float)
             
             # Boost scores for context matching (same artist, same language, same mood)
             candidates.loc[candidates['artist'].str.lower() == seed_song['artist'].lower(), 'similarity_score'] += 3.0
@@ -104,16 +127,10 @@ class LocalMusicRecommender:
         }
         mapped_mood = mood_map.get(mood.lower(), mood)
 
-        # Clean and extract query words
         query_words = []
         if text:
             text_clean = re.sub(r"[^\w\s]", " ", text.lower())
             query_words = [w for w in text_clean.split() if len(w) > 2]
-
-        self.df['similarity'] = 0.0
-        if query_words:
-            for word in query_words:
-                self.df['similarity'] += self.df['keywords'].str.contains(rf'\b{word}\b', case=False, na=False, regex=True).astype(float)
 
         languages = ['English', 'Hindi', 'Telugu', 'Tamil', 'Malayalam', 'Kannada']
         final_recommendations = []
@@ -123,21 +140,45 @@ class LocalMusicRecommender:
             if lang_matches.empty: 
                 continue
             
-            mood_exact = lang_matches[lang_matches['mood'].str.lower() == mapped_mood.lower()]
-            
-            if not mood_exact.empty and query_words:
-                mood_exact = mood_exact.sort_values(by='similarity', ascending=False)
+            # Filter exact mood matches first to avoid computing similarity on the entire language set
+            mood_exact = lang_matches[lang_matches['mood'].str.lower() == mapped_mood.lower()].copy()
             
             if len(mood_exact) >= top_n:
+                if query_words:
+                    mood_exact['similarity'] = 0.0
+                    for word in query_words:
+                        mood_exact['similarity'] += mood_exact['keywords'].str.contains(word, case=False, na=False, regex=False).astype(float)
+                    mood_exact = mood_exact.sort_values(by='similarity', ascending=False)
                 best_pool = mood_exact.head(100)
                 top_matches = best_pool.sample(n=min(len(best_pool), top_n))
             else:
-                fill_needed = top_n - len(mood_exact)
-                others = lang_matches[lang_matches['mood'].str.lower() != mapped_mood.lower()]
+                others = lang_matches[lang_matches['mood'].str.lower() != mapped_mood.lower()].copy()
                 
-                if not others.empty:
-                    if query_words:
+                if query_words:
+                    if not mood_exact.empty:
+                        mood_exact['similarity'] = 0.0
+                        for word in query_words:
+                            mood_exact['similarity'] += mood_exact['keywords'].str.contains(word, case=False, na=False, regex=False).astype(float)
+                        mood_exact = mood_exact.sort_values(by='similarity', ascending=False)
+                    
+                    if not others.empty:
+                        # Pre-filter others using fast substring checks combined via bitwise OR
+                        mask = others['keywords'].str.contains(query_words[0], case=False, na=False, regex=False)
+                        for word in query_words[1:]:
+                            mask |= others['keywords'].str.contains(word, case=False, na=False, regex=False)
+                        matching_others = others[mask].copy()
+                        
+                        others['similarity'] = 0.0
+                        if not matching_others.empty:
+                            matching_others['similarity'] = 0.0
+                            for word in query_words:
+                                matching_others['similarity'] += matching_others['keywords'].str.contains(word, case=False, na=False, regex=False).astype(float)
+                            # Merge back the computed similarities
+                            others.update(matching_others)
                         others = others.sort_values(by='similarity', ascending=False)
+                
+                fill_needed = top_n - len(mood_exact)
+                if not others.empty:
                     fill_pool = others.head(fill_needed * 2)
                     top_matches = pd.concat([mood_exact, fill_pool.sample(n=min(len(fill_pool), fill_needed))])
                 else:

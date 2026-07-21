@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MoodMelody | Mood-Aware Music</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=2.6">
+    <link rel="stylesheet" href="static/css/styles.css?v=3.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,700;1,700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 </head>
@@ -13,7 +13,7 @@
 
         <aside class="sidebar">
             <div class="brand">
-                <img src="{{ url_for('static', filename='img/logo.png') }}" alt="MM" class="logo-img">
+                <img src="static/img/logo.png" alt="MM" class="logo-img">
                 <div class="brand-text">
                     <h1>MoodMelody</h1>
                     <p>MOOD • MUSIC</p>
@@ -74,37 +74,37 @@
                     <p class="section-eyebrow">THE SPECTRUM</p>
                     <h2 class="section-title">Seven shades of feeling</h2>
                     <div class="mood-cards">
-                        <div class="mood-card happy" onclick="fetchRecommendations('', 'happiness')">
+                        <div class="mood-card happy" onclick="fetchRecommendations('', 'happy')">
                             <i class="fas fa-sun"></i>
                             <h3>Happy</h3>
                             <p>Bright, uplifting, full of light</p>
                         </div>
-                        <div class="mood-card sad" onclick="fetchRecommendations('', 'sadness')">
+                        <div class="mood-card sad" onclick="fetchRecommendations('', 'sad')">
                             <i class="fas fa-umbrella"></i>
                             <h3>Sad</h3>
                             <p>Melancholic, reflective, tender</p>
                         </div>
-                        <div class="mood-card calm" onclick="fetchRecommendations('', 'relaxed')">
+                        <div class="mood-card calm" onclick="fetchRecommendations('', 'calm')">
                             <i class="fas fa-leaf"></i>
                             <h3>Calm</h3>
                             <p>Soft, grounded, slow breath</p>
                         </div>
-                        <div class="mood-card energetic" onclick="fetchRecommendations('', 'motivated')">
+                        <div class="mood-card energetic" onclick="fetchRecommendations('', 'energetic')">
                             <i class="fas fa-bolt"></i>
                             <h3>Energetic</h3>
                             <p>Driving, alive, full throttle</p>
                         </div>
-                        <div class="mood-card neutral" onclick="fetchRecommendations('', 'relaxed')">
+                        <div class="mood-card neutral" onclick="fetchRecommendations('', 'neutral')">
                             <i class="fas fa-circle-half-stroke"></i>
                             <h3>Neutral</h3>
                             <p>Balanced, steady, in-between</p>
                         </div>
-                        <div class="mood-card focused" onclick="fetchRecommendations('', 'motivated')">
+                        <div class="mood-card focused" onclick="fetchRecommendations('', 'focused')">
                             <i class="fas fa-bullseye"></i>
                             <h3>Focused</h3>
                             <p>Locked in, deep, intentional</p>
                         </div>
-                        <div class="mood-card romantic" onclick="fetchRecommendations('', 'love')">
+                        <div class="mood-card romantic" onclick="fetchRecommendations('', 'romantic')">
                             <i class="fas fa-sparkles"></i>
                             <h3>Romantic</h3>
                             <p>Warm, intimate, slow-glow</p>
@@ -113,7 +113,7 @@
                 </div>
 
                 <footer class="home-footer">
-                    <p><i class="fas fa-info-circle"></i> Note: All tracks are 30-second high-quality previews. MoodMelody provides curated snippets to help you find your next favorite sound.</p>
+                    <p><i class="fas fa-info-circle"></i> Note: All tracks are high-quality Spotify streams. MoodMelody provides curated tracks to meet your emotional spectrum.</p>
                 </footer>
             </div>
 
@@ -124,6 +124,7 @@
                         <div class="foryou-title">
                             <p class="eyebrow">• PERSONALIZED FOR YOU</p>
                             <h2>Your <span id="detected-mood-name" style="color: var(--accent)">...</span> Soundscape</h2>
+                            <p id="detected-mood-desc" style="color: var(--text-dim); font-size: 0.85rem; margin-top: 4px; font-weight: 500;"></p>
                         </div>
                         <div class="lang-pill-selector">
                             <span class="active" data-lang="all">All</span>
@@ -181,7 +182,7 @@
                         </div>
                         <div class="song-list" id="playlist-songs-grid"></div>
 
-                        <!-- Spotify Playlist Recommendations Section -->
+                        <!-- Playlist Recommendations Section -->
                         <div class="playlist-recs-section" style="margin-top: 40px; border-top: 1px solid #222; padding-top: 30px;">
                             <div class="results-header" style="margin-bottom: 20px;">
                                 <div class="foryou-title">
@@ -211,13 +212,29 @@
         </main>
 
 
-        <div id="player-popup" class="player-popup" style="padding: 0; overflow: hidden; height: 80px; border: none; background: #000; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.8);">
-            <button id="close-player" style="position: absolute; right: 10px; top: 10px; z-index: 100; background: rgba(0, 0, 0, 0.7); color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: bold; line-height: 1;">×</button>
-            <iframe id="spotify-player-iframe" src="" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius: 12px;"></iframe>
+        <div id="player-popup" class="player-popup" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 480px; height: 100px; background: #121212; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); z-index: 1000; overflow: hidden; border: 1px solid #282828; padding: 0;">
+            <div style="display: flex; height: 100%; align-items: center; position: relative;">
+                <!-- Left: Spotify Iframe -->
+                <div style="flex: 1; height: 80px; padding: 10px;">
+                    <iframe id="spotify-player-iframe" src="" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius: 8px;"></iframe>
+                </div>
+                <!-- Right: Custom Queue Controls -->
+                <div style="width: 150px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-left: 1px solid #282828; padding: 10px; gap: 8px; height: 100%; box-sizing: border-box; background: #181818;">
+                    <div style="display: flex; gap: 14px; font-size: 1rem; color: #b3b3b3;">
+                        <i class="fas fa-random" id="shuffle-btn" style="cursor: pointer; transition: color 0.2s;" title="Shuffle"></i>
+                        <i class="fas fa-step-backward" id="prev-btn" style="cursor: pointer; transition: color 0.2s;" title="Previous"></i>
+                        <i class="fas fa-step-forward" id="next-btn" style="cursor: pointer; transition: color 0.2s;" title="Next"></i>
+                        <i class="fas fa-redo" id="repeat-btn" style="cursor: pointer; transition: color 0.2s;" title="Repeat"></i>
+                    </div>
+                    <div id="queue-status" style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Queue Active</div>
+                </div>
+                <!-- Close Button -->
+                <button id="close-player" style="position: absolute; right: 6px; top: 6px; background: transparent; color: #7f7f7f; border: none; font-size: 1.1rem; cursor: pointer; line-height: 1; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#7f7f7f'">×</button>
+            </div>
         </div>
     </div>
 
-    <audio id="audio-player"></audio>
-    <script src="{{ url_for('static', filename='js/app.js') }}?v=2.6"></script>
+    <script src="static/js/songs_data.js?v=3.0"></script>
+    <script src="static/js/app.js?v=3.0"></script>
 </body>
 </html>
