@@ -3,20 +3,23 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MoodMelody | Mood-Aware Music</title>
-    <link rel="stylesheet" href="static/css/styles.css?v=3.0">
+    <title>MoodMelody | AI Music & Movie Recommendations</title>
+    <meta name="description" content="MoodMelody — An AI-powered multilingual emotional entertainment platform. Describe your mood in English, Hindi or Telugu and get personalized music and movie recommendations.">
+    <link rel="stylesheet" href="static/css/styles.css?v=4.0">
+    <link rel="stylesheet" href="static/css/movies.css?v=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=Playfair+Display:ital,wght@0,700;1,700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,700;1,700&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
 </head>
 <body>
     <div class="app-shell">
 
+        <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
         <aside class="sidebar">
             <div class="brand">
                 <img src="static/img/logo.png" alt="MM" class="logo-img">
                 <div class="brand-text">
                     <h1>MoodMelody</h1>
-                    <p>MOOD • MUSIC</p>
+                    <p>MOOD • AI • EXPERIENCE</p>
                 </div>
             </div>
 
@@ -41,28 +44,43 @@
                     <i class="fas fa-history"></i>
                     <span>History</span>
                 </div>
+
+                <div class="nav-divider"></div>
+                <p class="nav-section-label">AI FEATURES</p>
+
+                <div class="nav-item" data-page="journey">
+                    <i class="fas fa-brain"></i>
+                    <span>Mood Journey</span>
+                    <span class="nav-badge">AI</span>
+                </div>
+                <div class="nav-item" data-page="analytics">
+                    <i class="fas fa-chart-line"></i>
+                    <span>Analytics</span>
+                    <span class="nav-badge">AI</span>
+                </div>
             </nav>
 
             <div class="sidebar-tip">
-                <p>Tip: Tell MoodMelody <em>how you feel</em> — get a perfectly tuned set.</p>
+                <p>Tip: Type <em>how you feel</em> in English, Hindi or Telugu — AI does the rest.</p>
             </div>
         </aside>
 
-
+        <!-- ── Main Content ────────────────────────────────────────────────── -->
         <main class="content">
 
+            <!-- HOME PAGE ──────────────────────────────────────────────────── -->
             <div id="page-home" class="page active">
                 <div class="hero">
-                    <p class="eyebrow">• MOOD-AWARE CURATION</p>
+                    <p class="eyebrow">• AI-POWERED EMOTIONAL CURATION</p>
                     <h1 class="hero-title">What does your <span class="accent-font">heart</span> sound like<span class="dot">?</span></h1>
                     <p class="hero-subtitle">
-                        Tell MoodMelody how you feel — in your own words. We'll read between the lines and craft a set that meets you where you are.
+                        Tell MoodMelody how you feel — in English, Hindi or Telugu. Our AI reads between the lines and curates personalized music &amp; movies that meet you where you are.
                     </p>
                 </div>
 
                 <div class="input-section">
                     <div class="text-input-wrapper">
-                        <textarea id="mood-input" placeholder="I'm feeling..."></textarea>
+                        <textarea id="mood-input" placeholder="I'm feeling... / Main feel kar raha hoon... / Naku feel avutundi..."></textarea>
                         <div class="input-actions">
                             <button class="voice-btn"><i class="fas fa-microphone"></i> Speak or hum</button>
                             <button id="search-btn" class="submit-btn">Find my sound</button>
@@ -72,7 +90,7 @@
 
                 <div class="spectrum-section">
                     <p class="section-eyebrow">THE SPECTRUM</p>
-                    <h2 class="section-title">Seven shades of feeling</h2>
+                    <h2 class="section-title">Nine shades of feeling</h2>
                     <div class="mood-cards">
                         <div class="mood-card happy" onclick="fetchRecommendations('', 'happy')">
                             <i class="fas fa-sun"></i>
@@ -86,12 +104,12 @@
                         </div>
                         <div class="mood-card calm" onclick="fetchRecommendations('', 'calm')">
                             <i class="fas fa-leaf"></i>
-                            <h3>Calm</h3>
+                            <h3>Relaxed</h3>
                             <p>Soft, grounded, slow breath</p>
                         </div>
                         <div class="mood-card energetic" onclick="fetchRecommendations('', 'energetic')">
                             <i class="fas fa-bolt"></i>
-                            <h3>Energetic</h3>
+                            <h3>Motivated</h3>
                             <p>Driving, alive, full throttle</p>
                         </div>
                         <div class="mood-card neutral" onclick="fetchRecommendations('', 'neutral')">
@@ -106,25 +124,34 @@
                         </div>
                         <div class="mood-card romantic" onclick="fetchRecommendations('', 'romantic')">
                             <i class="fas fa-sparkles"></i>
-                            <h3>Romantic</h3>
+                            <h3>Love</h3>
                             <p>Warm, intimate, slow-glow</p>
+                        </div>
+                        <div class="mood-card angry" onclick="fetchRecommendations('', 'anger')">
+                            <i class="fas fa-fire"></i>
+                            <h3>Anger</h3>
+                            <p>Raw, fierce, unleashed</p>
+                        </div>
+                        <div class="mood-card surprise" onclick="fetchRecommendations('', 'surprise')">
+                            <i class="fas fa-star-burst"></i>
+                            <h3>Surprise</h3>
+                            <p>Unexpected, electric, wow</p>
                         </div>
                     </div>
                 </div>
 
-                <footer class="home-footer">
-                    <p><i class="fas fa-info-circle"></i> Note: All tracks are high-quality Spotify streams. MoodMelody provides curated tracks to meet your emotional spectrum.</p>
-                </footer>
+
             </div>
 
 
+            <!-- FOR YOU PAGE ────────────────────────────────────────────────── -->
             <div id="page-foryou" class="page">
                 <div class="results-container">
                     <div class="results-header">
                         <div class="foryou-title">
                             <p class="eyebrow">• PERSONALIZED FOR YOU</p>
-                            <h2>Your <span id="detected-mood-name" style="color: var(--accent)">...</span> Soundscape</h2>
-                            <p id="detected-mood-desc" style="color: var(--text-dim); font-size: 0.85rem; margin-top: 4px; font-weight: 500;"></p>
+                            <h2>Your <span id="detected-mood-name" style="color: var(--accent)">...</span> Experience</h2>
+                            <p id="detected-mood-desc" class="mood-meta-row"></p>
                         </div>
                         <div class="lang-pill-selector">
                             <span class="active" data-lang="all">All</span>
@@ -133,13 +160,31 @@
                             <span data-lang="Telugu">Telugu</span>
                         </div>
                     </div>
-                    <div class="song-list" id="song-grid">
 
+                    <!-- Media Toggle Tabs -->
+                    <div class="media-tabs">
+                        <button class="media-tab-btn active" data-tab="music" id="tab-music">
+                            <i class="fas fa-music"></i> Music Soundscape
+                        </button>
+                        <button class="media-tab-btn" data-tab="movies" id="tab-movies">
+                            <i class="fas fa-film"></i> Cinema Picks
+                        </button>
+                    </div>
+
+                    <!-- Music Section -->
+                    <div id="music-section" class="song-list-section">
+                        <div class="song-list" id="song-grid"></div>
+                    </div>
+
+                    <!-- Movies Section -->
+                    <div id="movie-grid-section" class="hidden">
+                        <div class="movie-grid" id="movie-grid"></div>
                     </div>
                 </div>
             </div>
 
 
+            <!-- FAVORITES PAGE ──────────────────────────────────────────────── -->
             <div id="page-favorites" class="page">
                 <div class="results-container">
                     <div class="results-header">
@@ -148,13 +193,12 @@
                             <h2>Liked <span style="color: var(--accent)">Songs</span></h2>
                         </div>
                     </div>
-                    <div class="song-list" id="favorites-grid">
-
-                    </div>
+                    <div class="song-list" id="favorites-grid"></div>
                 </div>
             </div>
 
 
+            <!-- PLAYLISTS PAGE ──────────────────────────────────────────────── -->
             <div id="page-playlists" class="page">
                 <div class="results-container">
                     <div id="playlist-grid-view">
@@ -181,8 +225,6 @@
                             </button>
                         </div>
                         <div class="song-list" id="playlist-songs-grid"></div>
-
-                        <!-- Playlist Recommendations Section -->
                         <div class="playlist-recs-section" style="margin-top: 40px; border-top: 1px solid #222; padding-top: 30px;">
                             <div class="results-header" style="margin-bottom: 20px;">
                                 <div class="foryou-title">
@@ -198,6 +240,7 @@
             </div>
 
 
+            <!-- HISTORY PAGE ────────────────────────────────────────────────── -->
             <div id="page-history" class="page">
                 <div class="results-container">
                     <div class="results-header">
@@ -205,36 +248,47 @@
                             <p class="eyebrow">• VIBE JOURNEY</p>
                             <h2>Recent <span style="color: var(--accent)">Moods</span></h2>
                         </div>
+                        <button class="track-btn" onclick="window.clearHistory()" style="color: #ff476f; border-color: rgba(255,71,111,0.3);">
+                            <i class="fas fa-trash"></i> Clear History
+                        </button>
                     </div>
                     <div class="history-list" id="history-list"></div>
                 </div>
             </div>
-        </main>
 
 
-        <div id="player-popup" class="player-popup" style="display: none; position: fixed; bottom: 20px; right: 20px; width: 480px; height: 100px; background: #121212; border-radius: 12px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); z-index: 1000; overflow: hidden; border: 1px solid #282828; padding: 0;">
-            <div style="display: flex; height: 100%; align-items: center; position: relative;">
-                <!-- Left: Spotify Iframe -->
-                <div style="flex: 1; height: 80px; padding: 10px;">
-                    <iframe id="spotify-player-iframe" src="" width="100%" height="80" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy" style="border-radius: 8px;"></iframe>
+            <!-- MOOD JOURNEY PAGE (AI) ──────────────────────────────────────── -->
+            <div id="page-journey" class="page">
+                <div class="results-container">
+                    <div id="mood-journey-container"></div>
                 </div>
-                <!-- Right: Custom Queue Controls -->
-                <div style="width: 150px; display: flex; flex-direction: column; justify-content: center; align-items: center; border-left: 1px solid #282828; padding: 10px; gap: 8px; height: 100%; box-sizing: border-box; background: #181818;">
-                    <div style="display: flex; gap: 14px; font-size: 1rem; color: #b3b3b3;">
-                        <i class="fas fa-random" id="shuffle-btn" style="cursor: pointer; transition: color 0.2s;" title="Shuffle"></i>
-                        <i class="fas fa-step-backward" id="prev-btn" style="cursor: pointer; transition: color 0.2s;" title="Previous"></i>
-                        <i class="fas fa-step-forward" id="next-btn" style="cursor: pointer; transition: color 0.2s;" title="Next"></i>
-                        <i class="fas fa-redo" id="repeat-btn" style="cursor: pointer; transition: color 0.2s;" title="Repeat"></i>
-                    </div>
-                    <div id="queue-status" style="font-size: 0.65rem; color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Queue Active</div>
-                </div>
-                <!-- Close Button -->
-                <button id="close-player" style="position: absolute; right: 6px; top: 6px; background: transparent; color: #7f7f7f; border: none; font-size: 1.1rem; cursor: pointer; line-height: 1; font-weight: bold; transition: color 0.2s;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#7f7f7f'">×</button>
             </div>
+
+
+            <!-- ANALYTICS PAGE (AI) ────────────────────────────────────────── -->
+            <div id="page-analytics" class="page">
+                <div class="results-container">
+                    <div id="analytics-container"></div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Movie Details Modal (rendered dynamically) -->
+    <div id="movie-details-modal" class="modal-backdrop"></div>
+
+    <!-- Playlist Picker Modal -->
+    <div id="playlist-picker-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal-content" style="max-width: 400px;">
+            <h3 style="margin-bottom: 20px;">Add to Playlist</h3>
+            <div id="playlist-picker-list"></div>
+            <button onclick="document.getElementById('playlist-picker-modal').style.display='none'" style="margin-top:16px; width:100%; padding:10px; background: var(--surface-2); border:none; border-radius:8px; color:var(--text-dim); cursor:pointer;">Cancel</button>
         </div>
     </div>
 
     <script src="static/js/songs_data.js?v=3.0"></script>
     <script src="static/js/app.js?v=3.0"></script>
+    <script type="module" src="static/js/movies.js?v=1.0"></script>
 </body>
 </html>

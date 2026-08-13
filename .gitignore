@@ -12,3 +12,6 @@ dist/
 venv/
 data/songs.csv
 data/songs_clean.csv
+*.zip
+*.log
+

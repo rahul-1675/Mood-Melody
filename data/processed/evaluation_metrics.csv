@@ -1,0 +1,6 @@
+Model,Precision@5,Precision@10,Recall@5,Recall@10,Hit_Rate@10,NDCG@10,Catalog_Coverage,Diversity_Score
+Popularity Baseline,0.421,0.385,0.21,0.342,0.612,0.528,14.2%,0.41
+Content-Based Filtering,0.614,0.562,0.315,0.49,0.745,0.672,48.5%,0.68
+Collaborative Filtering (Matrix Factorization),0.71,0.658,0.398,0.582,0.824,0.748,62.1%,0.615
+Mood-Based Vector Match,0.812,0.765,0.485,0.68,0.912,0.845,81.2%,0.825
+Hybrid MoodMelody Engine,0.914,0.885,0.612,0.815,0.965,0.928,92.4%,0.895

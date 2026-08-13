@@ -8,33 +8,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const historyList = document.getElementById('history-list');
     
     const detectedMoodName = document.getElementById('detected-mood-name');
-    const playerPopup = document.getElementById('player-popup');
-    const closePlayer = document.getElementById('close-player');
     const languagePills = document.querySelectorAll('.lang-pill-selector span');
     const navItems = document.querySelectorAll('.nav-item');
     const pages = document.querySelectorAll('.page');
-    
-    // Player controls
-    const shuffleBtn = document.getElementById('shuffle-btn');
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-    const repeatBtn = document.getElementById('repeat-btn');
-    const queueStatus = document.getElementById('queue-status');
-    const iframePlayer = document.getElementById('spotify-player-iframe');
     
     // App State
     let allSongs = [];
     let currentLang = 'all';
     let currentPage = 'home';
     let likedSongTitles = new Set();
-    
-    // Player Queue State
-    let originalQueue = [];
-    let activeQueue = [];
-    let currentIndex = -1;
-    let isShuffle = false;
-    let repeatMode = 'all'; // 'none', 'one', 'all'
-    let skipTimer = null;
 
     // Versioned LocalStorage Helper
     const DB_VERSION = "v3";
@@ -219,7 +201,51 @@ document.addEventListener('DOMContentLoaded', () => {
             dance: { mood: 'party', weight: 0.9 },
             club: { mood: 'party', weight: 0.8 },
             rave: { mood: 'party', weight: 1.0 },
-            celebration: { mood: 'party', weight: 0.8 }
+            celebration: { mood: 'party', weight: 0.8 },
+
+            // Hinglish Lexicon Additions
+            khush: { mood: 'happy', weight: 1.0 },
+            khushi: { mood: 'happy', weight: 1.0 },
+            prasann: { mood: 'happy', weight: 1.0 },
+            badhiya: { mood: 'happy', weight: 0.9 },
+            badiya: { mood: 'happy', weight: 0.9 },
+            dukh: { mood: 'sad', weight: 1.0 },
+            dukhi: { mood: 'sad', weight: 1.0 },
+            udaas: { mood: 'sad', weight: 1.0 },
+            udasi: { mood: 'sad', weight: 1.0 },
+            akela: { mood: 'sad', weight: 1.0 },
+            akeli: { mood: 'sad', weight: 1.0 },
+            rona: { mood: 'sad', weight: 1.0 },
+            roya: { mood: 'sad', weight: 1.0 },
+            gussa: { mood: 'angry', weight: 1.0 },
+            gusse: { mood: 'angry', weight: 1.0 },
+            krodh: { mood: 'angry', weight: 1.0 },
+            nafrat: { mood: 'angry', weight: 1.0 },
+            dar: { mood: 'calm', weight: 0.8 },
+            darr: { mood: 'calm', weight: 0.8 },
+            ghabrahat: { mood: 'calm', weight: 0.8 },
+            sukoon: { mood: 'calm', weight: 1.0 },
+            sukun: { mood: 'calm', weight: 1.0 },
+            shant: { mood: 'calm', weight: 1.0 },
+            shaant: { mood: 'calm', weight: 1.0 },
+            aaram: { mood: 'calm', weight: 1.0 },
+            josh: { mood: 'motivated', weight: 1.0 },
+            junoon: { mood: 'motivated', weight: 1.0 },
+            mehnat: { mood: 'motivated', weight: 1.0 },
+
+            // Tenglish Lexicon Additions
+            santosham: { mood: 'happy', weight: 1.0 },
+            santhosham: { mood: 'happy', weight: 1.0 },
+            anandam: { mood: 'happy', weight: 1.0 },
+            dukkham: { mood: 'sad', weight: 1.0 },
+            dukham: { mood: 'sad', weight: 1.0 },
+            badha: { mood: 'sad', weight: 1.0 },
+            ontari: { mood: 'sad', weight: 1.0 },
+            kopam: { mood: 'angry', weight: 1.0 },
+            bhayam: { mood: 'calm', weight: 0.8 },
+            prasantham: { mood: 'calm', weight: 1.0 },
+            prashantham: { mood: 'calm', weight: 1.0 },
+            pattudala: { mood: 'motivated', weight: 1.0 }
         },
         
         multiWordExpressions: [
@@ -233,7 +259,20 @@ document.addEventListener('DOMContentLoaded', () => {
             { phrase: "depressed lately", mood: "depressed", weight: 1.5 },
             { phrase: "feeling down", mood: "sad", weight: 1.2 },
             { phrase: "passed away", mood: "sad", weight: 1.5 },
-            { phrase: "broken heart", mood: "sad", weight: 1.5 }
+            { phrase: "broken heart", mood: "sad", weight: 1.5 },
+            // Hinglish expressions
+            { phrase: "bahut khush", mood: "happy", weight: 1.5 },
+            { phrase: "achha lag raha", mood: "happy", weight: 1.5 },
+            { phrase: "bahut dukh", mood: "sad", weight: 1.5 },
+            { phrase: "akela feel", mood: "sad", weight: 1.5 },
+            { phrase: "gussa aa raha", mood: "angry", weight: 1.5 },
+            { phrase: "gusse mein", mood: "angry", weight: 1.5 },
+            { phrase: "dar lag raha", mood: "calm", weight: 1.2 },
+            // Tenglish expressions
+            { phrase: "santosham ga undi", mood: "happy", weight: 1.5 },
+            { phrase: "dukkham ga undi", mood: "sad", weight: 1.5 },
+            { phrase: "kopam vastuundi", mood: "angry", weight: 1.5 },
+            { phrase: "bhayam ga undi", mood: "calm", weight: 1.2 }
         ],
         
         fillerWords: new Set([
@@ -242,7 +281,7 @@ document.addEventListener('DOMContentLoaded', () => {
             "lately", "my", "the", "a", "an", "to", "because", "in", "on", "at", "for", "with"
         ]),
         
-        negators: ['not', 'no', 'never', 'without'],
+        negators: ['not', 'no', 'never', 'without', 'nahi', 'nahin', 'na', 'mat', 'ledu', 'ledhu', 'kadu', 'vaddu'],
         
         analyze(text) {
             if (!text) {
@@ -471,11 +510,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const moodDescEl = document.getElementById('detected-mood-desc');
             if (moodDescEl) {
                 moodDescEl.innerHTML = `
-                    <div style="margin-top: 6px; display: flex; flex-direction: column; gap: 4px; line-height: 1.4;">
-                        <span><strong>Detected Mood:</strong> <span style="color: var(--accent); font-weight: bold;">${detectedMood.charAt(0).toUpperCase() + detectedMood.slice(1)}</span></span>
-                        <span><strong>Confidence:</strong> ${confidence}%</span>
-                        <span><strong>Matched Keywords:</strong> ${matchedKeywords.length > 0 ? matchedKeywords.join(', ') : 'none'}</span>
-                    </div>
+                    <span class="mood-meta-chip"><i class="fas fa-brain"></i> Confidence: ${confidence}%</span>
+                    ${matchedKeywords.length > 0 ? `<span class="mood-meta-chip"><i class="fas fa-key"></i> ${matchedKeywords.slice(0,3).join(', ')}</span>` : ''}
                 `;
             }
             
@@ -536,14 +572,21 @@ document.addEventListener('DOMContentLoaded', () => {
             // Add search to history
             addMoodHistory(text || detectedMood, detectedMood);
             
-            // Update Play Queue
-            originalQueue = [...allSongs];
-            activeQueue = [...originalQueue];
-            currentIndex = 0;
-            isShuffle = false;
-            
             navigateTo('foryou');
             renderSongs(allSongs, songGrid, 'foryou');
+
+            // ── AI Movie Pipeline Hook ──────────────────────────────
+            // Fire the hybrid movie recommendation pipeline asynchronously
+            // so the song list renders instantly with no blocking.
+            if (window.MoodMelodyAI && window.MoodMelodyAI.runMoviePipeline) {
+                setTimeout(() => {
+                    try {
+                        window.MoodMelodyAI.runMoviePipeline(text, mood || null);
+                    } catch (movieErr) {
+                        console.warn('[MoodMelody] Movie pipeline error (non-fatal):', movieErr);
+                    }
+                }, 50);
+            }
             
             const t1 = performance.now();
             console.log(`Recommendations generated client-side in ${t1 - t0}ms.`);
@@ -583,44 +626,34 @@ document.addEventListener('DOMContentLoaded', () => {
         };
 
         container.innerHTML = `
-            <div class="spotify-table" style="width: 100%;">
-                <div class="spotify-table-header">
-                    <span class="spotify-row-index">#</span>
-                    <span>Title</span>
-                    <span>Album</span>
-                    <span><i class="far fa-clock"></i></span>
-                    <span style="text-align: right; padding-right: 15px;">Actions</span>
-                </div>
+            <div class="track-table">
                 ${filtered.map((song, idx) => {
                     window.songRegistry = window.songRegistry || {};
                     window.songRegistry[song.id] = song;
                     
                     const isLiked = likedSongTitles.has(song.title.toLowerCase().trim());
                     const heartIcon = isLiked ? 'fas fa-heart' : 'far fa-heart';
-                    const heartColor = isLiked ? 'var(--accent)' : 'var(--text-dim)';
-                    const heartClass = isLiked ? 'active' : '';
-                    const heartText = isLiked ? 'Liked' : 'Like';
                     
                     return `
-                        <div class="spotify-table-row">
-                            <span class="spotify-row-index">${idx + 1}</span>
-                            <div class="spotify-row-title-container" onclick="playTrackFromQueue(${idx}, '${type}')">
-                                <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}" width="40" height="40" loading="lazy" style="border-radius: 4px; object-fit: cover;">
-                                <div class="spotify-row-text">
-                                    <span class="spotify-row-name">${song.title}</span>
-                                    <span class="spotify-row-artist">${song.artist}</span>
-                                </div>
+                        <div class="track-row">
+                            <span class="track-index">${idx + 1}</span>
+                            <div class="track-cover-wrapper">
+                                <img src="${song.album_art || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=300'}" alt="${song.title}" class="track-cover" loading="lazy" />
                             </div>
-                            <span class="spotify-row-album">${song.album || '---'}</span>
-                            <span class="spotify-row-duration">${formatDuration(song.duration_ms)}</span>
-                            <div class="spotify-row-actions">
+                            <div class="track-info">
+                                <span class="track-name">${song.title}</span>
+                                <span class="track-artist">${song.artist}</span>
+                            </div>
+                            <span class="track-album">${song.album || 'Single'}</span>
+                            <span class="track-duration">${formatDuration(song.duration_ms)}</span>
+                            <div class="track-actions">
                                 ${type === 'favorites' ? 
-                                    `<button class="action-btn" style="color: #ff476f; background: transparent; border: none; padding: 0 10px; cursor: pointer;" onclick="deleteFavorite('${song.id}')"><i class="fas fa-trash"></i> Remove</button>` : 
-                                    `<button class="action-btn ${heartClass}" style="color: ${heartColor}; background: transparent; border: none; padding: 0 10px; cursor: pointer;" onclick="toggleFavorite(this, '${song.id}')"><i class="${heartIcon}"></i> ${heartText}</button>`
+                                    `<button class="track-btn" style="color: #ff476f;" onclick="deleteFavorite('${song.id}')"><i class="fas fa-trash"></i> Remove</button>` : 
+                                    `<button class="track-btn ${isLiked ? 'liked' : ''}" onclick="toggleFavorite(this, '${song.id}')"><i class="${heartIcon}"></i> ${isLiked ? 'Liked' : 'Like'}</button>`
                                 }
                                 ${type === 'playlist-detail' ? 
-                                    `<button class="action-btn" style="color: #ff476f; background: transparent; border: none; padding: 0 10px; cursor: pointer;" onclick="removeSongFromPlaylist('${song.id}')"><i class="fas fa-minus-circle"></i> Remove</button>` : 
-                                    `<button class="action-btn" style="color: var(--text-dim); background: transparent; border: none; padding: 0 10px; cursor: pointer;" onclick="showPlaylistPicker('${song.id}')"><i class="fas fa-plus"></i> Add to Playlist</button>`
+                                    `<button class="track-btn" style="color: #ff476f;" onclick="removeSongFromPlaylist('${song.id}')"><i class="fas fa-minus-circle"></i> Remove</button>` : 
+                                    `<button class="track-btn" onclick="showPlaylistPicker('${song.id}')"><i class="fas fa-plus"></i> Add</button>`
                                 }
                             </div>
                         </div>
@@ -718,7 +751,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return `
                         <div class="spotify-table-row">
                             <span class="spotify-row-index">${idx + 1}</span>
-                            <div class="spotify-row-title-container" onclick="playTrackFromQueue(${idx}, 'playlist')">
+                            <div class="spotify-row-title-container">
                                 <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}" width="40" height="40" loading="lazy" style="border-radius: 4px; object-fit: cover;">
                                 <div class="spotify-row-text">
                                     <span class="spotify-row-name">${song.title}</span>
@@ -851,7 +884,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     return `
                         <div class="spotify-table-row">
                             <span class="spotify-row-index">${idx + 1}</span>
-                            <div class="spotify-row-title-container" onclick="playTrackFromQueue(${idx}, 'recs')">
+                            <div class="spotify-row-title-container">
                                 <img src="${song.album_art || 'https://via.placeholder.com/300'}" alt="${song.title}" width="40" height="40" loading="lazy" style="border-radius: 4px; object-fit: cover;">
                                 <div class="spotify-row-text">
                                     <span class="spotify-row-name">${song.title}</span>
@@ -903,219 +936,69 @@ document.addEventListener('DOMContentLoaded', () => {
         StorageManager.set('history', historyData);
     }
 
+    window.clearHistory = () => {
+        if (!historyData || historyData.length === 0) return alert("History is already empty!");
+        if (confirm("Are you sure you want to clear your entire mood history?")) {
+            historyData = [];
+            StorageManager.set('history', []);
+            StorageManager.set('moodmelody_mood_history', []);
+            loadHistory();
+        }
+    };
+
+    window.deleteHistoryItem = (idx) => {
+        if (historyData[idx] !== undefined) {
+            historyData.splice(idx, 1);
+            StorageManager.set('history', historyData);
+            StorageManager.set('moodmelody_mood_history', historyData);
+            loadHistory();
+        }
+    };
+
+    const MOOD_EMOJIS_MAP = {
+        happy: '😊', sad: '😔', calm: '😌', relaxed: '😌', energetic: '🔥', motivated: '🔥',
+        neutral: '😐', focused: '🎯', romantic: '❤️', love: '❤️', anger: '😡', surprise: '😲'
+    };
+
     function loadHistory() {
-        historyList.innerHTML = historyData.map(h => `
-            <div class="history-item">
-                <div class="hist-info"><p>"${h.text}"</p><span class="mood-tag">${h.mood}</span></div>
-                <span class="time">${h.time}</span>
-            </div>
-        `).join('');
-    }
-
-    // Playback Logic
-    window.playSong = (url, title, art) => {
-        originalQueue = [{ preview_url: url, title: title, album_art: art }];
-        activeQueue = [...originalQueue];
-        currentIndex = 0;
-        playCurrentQueueTrack();
-    };
-
-    window.playTrackFromQueue = (idx, queueType) => {
-        if (queueType === 'favorites') originalQueue = [...favoritesQueue];
-        else if (queueType === 'playlist') originalQueue = [...playlistQueue];
-        else if (queueType === 'recs') originalQueue = [...recsQueue];
-        else originalQueue = [...foryouQueue];
-        
-        activeQueue = [...originalQueue];
-        currentIndex = idx;
-        
-        if (isShuffle) {
-            // Apply shuffle logic starting with clicked track
-            const currentSong = activeQueue[currentIndex];
-            const otherSongs = activeQueue.filter(s => s.id !== currentSong.id);
-            activeQueue = [currentSong, ...shuffleArray(otherSongs)];
-            currentIndex = 0;
-        }
-        
-        playCurrentQueueTrack();
-    };
-
-    function getSpotifyTrackId(url) {
-        if (!url) return null;
-        const match = url.match(/track\/([a-zA-Z0-9]+)/);
-        return match ? match[1] : null;
-    }
-
-    window.playCurrentQueueTrack = () => {
-        if (currentIndex < 0 || currentIndex >= activeQueue.length) return;
-        const song = activeQueue[currentIndex];
-        if (!song) return;
-        
-        playerPopup.style.display = 'block';
-        
-        const trackId = getSpotifyTrackId(song.preview_url);
-        if (trackId && iframePlayer) {
-            iframePlayer.src = `https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0`;
-        }
-        
-        // Setup Auto Next skip timer
-        startSkipTimer(song);
-        
-        // Save State
-        StorageManager.set('currentSong', song);
-        StorageManager.set('currentIndex', currentIndex);
-        StorageManager.set('activeQueue', activeQueue);
-        StorageManager.set('originalQueue', originalQueue);
-        
-        updateRowHighlighting();
-        updateControlsUI();
-        addToRecentlyPlayed(song);
-    };
-
-    function startSkipTimer(song) {
-        if (skipTimer) clearTimeout(skipTimer);
-        
-        // Default skip timer is 30 seconds since most Spotify Embed previews are 30s
-        const duration = 30000;
-        
-        skipTimer = setTimeout(() => {
-            playNextSong();
-        }, duration);
-    }
-
-    window.playNextSong = () => {
-        if (activeQueue.length === 0) return;
-        
-        if (repeatMode === 'one') {
-            playCurrentQueueTrack();
+        if (!historyData || historyData.length === 0) {
+            historyList.innerHTML = `<p style="color: var(--text-muted); padding: 25px; font-size: 0.95rem; text-align: center;">No mood history yet. Type a mood prompt on the Home page to start tracking.</p>`;
             return;
         }
-        
-        currentIndex++;
-        if (currentIndex >= activeQueue.length) {
-            if (repeatMode === 'all') {
-                currentIndex = 0;
-            } else {
-                currentIndex = activeQueue.length - 1;
-                if (skipTimer) clearTimeout(skipTimer);
-                return;
-            }
-        }
-        playCurrentQueueTrack();
-    };
 
-    window.playPrevSong = () => {
-        if (activeQueue.length === 0) return;
-        
-        currentIndex--;
-        if (currentIndex < 0) {
-            if (repeatMode === 'all') {
-                currentIndex = activeQueue.length - 1;
-            } else {
-                currentIndex = 0;
-            }
-        }
-        playCurrentQueueTrack();
-    };
-
-    window.toggleShuffle = () => {
-        if (activeQueue.length === 0) return;
-        isShuffle = !isShuffle;
-        const currentSong = activeQueue[currentIndex];
-        
-        if (isShuffle) {
-            const otherSongs = originalQueue.filter(s => s.id !== currentSong.id);
-            activeQueue = [currentSong, ...shuffleArray(otherSongs)];
-            currentIndex = 0;
-        } else {
-            activeQueue = [...originalQueue];
-            currentIndex = activeQueue.findIndex(s => s.id === currentSong.id);
-            if (currentIndex === -1) currentIndex = 0;
-        }
-        
-        StorageManager.set('isShuffle', isShuffle);
-        updateControlsUI();
-    };
-
-    window.toggleRepeat = () => {
-        if (repeatMode === 'all') {
-            repeatMode = 'one';
-        } else if (repeatMode === 'one') {
-            repeatMode = 'none';
-        } else {
-            repeatMode = 'all';
-        }
-        StorageManager.set('repeatMode', repeatMode);
-        updateControlsUI();
-    };
-
-    function shuffleArray(array) {
-        const arr = [...array];
-        for (let i = arr.length - 1; i > 0; i--) {
-            const j = Math.floor(Math.random() * (i + 1));
-            [arr[i], arr[j]] = [arr[j], arr[i]];
-        }
-        return arr;
+        historyList.innerHTML = `
+            <div class="history-feed">
+                ${historyData.map((h, idx) => {
+                    const moodKey = (h.mood || 'neutral').toLowerCase();
+                    const emoji = MOOD_EMOJIS_MAP[moodKey] || '✨';
+                    const promptText = h.text || h.mood || 'Session';
+                    const safePrompt = promptText.replace(/'/g, "\\'");
+                    return `
+                        <div class="history-card">
+                            <div class="history-left">
+                                <div class="history-mood-badge">${emoji}</div>
+                                <div class="history-details">
+                                    <span class="history-prompt">"${promptText}"</span>
+                                    <div class="history-meta">
+                                        <span class="history-mood-chip">${h.mood || 'Relaxed'}</span>
+                                        <span><i class="far fa-clock" style="margin-right: 4px;"></i> ${h.time || 'Recently'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div style="display: flex; gap: 8px; align-items: center;">
+                                <button class="history-replay-btn" onclick="window.fetchRecommendations('${safePrompt}', '')">
+                                    <i class="fas fa-redo-alt"></i> Re-explore
+                                </button>
+                                <button class="track-btn" style="color: #ff476f; padding: 8px 12px;" title="Delete this entry" onclick="window.deleteHistoryItem(${idx})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('')}
+            </div>
+        `;
     }
-
-    function updateControlsUI() {
-        if (shuffleBtn) {
-            shuffleBtn.style.color = isShuffle ? 'var(--accent)' : '#b3b3b3';
-        }
-        if (repeatBtn) {
-            if (repeatMode === 'all') {
-                repeatBtn.className = 'fas fa-redo';
-                repeatBtn.style.color = 'var(--accent)';
-                repeatBtn.title = 'Repeat Playlist';
-            } else if (repeatMode === 'one') {
-                repeatBtn.className = 'fas fa-redo-alt';
-                repeatBtn.style.color = '#ff9800';
-                repeatBtn.title = 'Repeat One';
-            } else {
-                repeatBtn.className = 'fas fa-redo';
-                repeatBtn.style.color = '#b3b3b3';
-                repeatBtn.title = 'Repeat Off';
-            }
-        }
-    }
-
-    function addToRecentlyPlayed(song) {
-        recentlyPlayed = [song, ...recentlyPlayed.filter(s => s.id !== song.id)].slice(0, 10);
-        StorageManager.set('recentlyPlayed', recentlyPlayed);
-    }
-
-    closePlayer.onclick = () => { 
-        playerPopup.style.display = 'none'; 
-        if (iframePlayer) iframePlayer.src = "";
-        if (skipTimer) clearTimeout(skipTimer);
-    };
-
-    function updateRowHighlighting() {
-        const rows = document.querySelectorAll('.spotify-table-row');
-        rows.forEach(row => {
-            row.classList.remove('playing-highlight');
-        });
-        
-        if (currentIndex >= 0 && currentIndex < activeQueue.length) {
-            const currentSong = activeQueue[currentIndex];
-            rows.forEach(row => {
-                const nameEl = row.querySelector('.spotify-row-name');
-                const artistEl = row.querySelector('.spotify-row-artist');
-                if (nameEl && artistEl) {
-                    if (nameEl.textContent.trim().toLowerCase() === currentSong.title.trim().toLowerCase() &&
-                        artistEl.textContent.trim().toLowerCase() === currentSong.artist.trim().toLowerCase()) {
-                        row.classList.add('playing-highlight');
-                    }
-                }
-            });
-        }
-    }
-
-    // Attach Event Listeners to UI Controls
-    if (shuffleBtn) shuffleBtn.onclick = () => window.toggleShuffle();
-    if (prevBtn) prevBtn.onclick = () => window.playPrevSong();
-    if (nextBtn) nextBtn.onclick = () => window.playNextSong();
-    if (repeatBtn) repeatBtn.onclick = () => window.toggleRepeat();
 
     // Language selector logic
     languagePills.forEach(pill => {
@@ -1134,34 +1017,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     searchBtn.onclick = () => window.fetchRecommendations(moodInput.value);
 
-    // Restore Playback State on Load
+    // Restore Preference State on Load
     function restoreState() {
-        const savedQueue = StorageManager.get('activeQueue', []);
-        const savedOriginal = StorageManager.get('originalQueue', []);
-        const savedIndex = StorageManager.get('currentIndex', -1);
-        const savedIsShuffle = StorageManager.get('isShuffle', false);
-        const savedRepeatMode = StorageManager.get('repeatMode', 'all');
         const savedLang = StorageManager.get('languagePreference', 'all');
-        
-        if (savedQueue.length > 0 && savedIndex >= 0) {
-            activeQueue = savedQueue;
-            originalQueue = savedOriginal.length > 0 ? savedOriginal : savedQueue;
-            currentIndex = savedIndex;
-            isShuffle = savedIsShuffle;
-            repeatMode = savedRepeatMode;
-            
-            const song = activeQueue[currentIndex];
-            if (song) {
-                playerPopup.style.display = 'block';
-                const trackId = getSpotifyTrackId(song.preview_url);
-                if (trackId && iframePlayer) {
-                    iframePlayer.src = `https://open.spotify.com/embed/track/${trackId}?utm_source=generator&theme=0`;
-                }
-                updateRowHighlighting();
-                updateControlsUI();
-            }
-        }
-        
         currentLang = savedLang;
         languagePills.forEach(pill => {
             if (pill.dataset.lang === currentLang) {
